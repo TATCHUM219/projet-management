@@ -2,7 +2,7 @@
 
 import prisma from "@/lib/prisma";
 import { randomBytes } from "crypto";
-import { auth, currentUser } from "@clerk/nextjs/server"
+import { auth } from "@clerk/nextjs/server"
 import { Project } from '@/type';
 
 export async function checkAndAddUser(email: string, name: string) {
