@@ -125,7 +125,7 @@ const page = ({ params }: { params: Promise<{ projectId: string }> }) => {
                             />
                         </div>
                         <div className='flex justify-end' onClick={handleSubmit}>
-                            <button className='btn mt-4 btn-md btn-primary'>Créer la tâche</button>
+                            <button className='btn mt-4 btn-md btn-primary'> la tâche</button>
                         </div>
                     </div>
 

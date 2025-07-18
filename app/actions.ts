@@ -2,6 +2,16 @@
 
 import prisma from "@/lib/prisma";
 import { randomBytes } from "crypto";
+import { auth, currentUser } from "@clerk/nextjs/server"
+import { Project } from '@/type';
+
+export async function isAdmin() {
+  const { userId } =await auth()
+  if (!userId) return false
+
+  const user = await prisma.user.findUnique({ where: { id: userId } })
+  return user?.role === "ADMIN"
+}
 
 export async function checkAndAddUser(email: string, name: string) {
     if (!email) return
@@ -79,7 +89,8 @@ export async function getProjectsCreatedByUser(email: string) {
                             select: {
                                 id: true,
                                 name: true,
-                                email: true
+                                email: true,
+                                 role: true, 
                             }
                         }
                     }
@@ -384,6 +395,72 @@ export const updateTaskStatus = async (taskId: string, newStatus: string, soluti
         console.error(error)
         throw new Error
     }
+}
+
+export async function getProjectResources(projectId: string) {
+  try {
+    const resources = await prisma.resource.findMany({ where: { projectId } });
+    return resources;
+  } catch (error) {
+    console.error(error);
+    throw new Error('Erreur lors de la récupération des ressources du projet');
+  }
+}
+
+export async function getTaskResources(taskId: string) {
+  try {
+    const taskResources = await prisma.taskResource.findMany({
+      where: { taskId },
+      include: { resource: true }
+    });
+    return taskResources;
+  } catch (error) {
+    console.error(error);
+    throw new Error('Erreur lors de la récupération des ressources de la tâche');
+  }
+}
+
+export async function getProjectCosts(projectId: string) {
+  try {
+    const costs = await prisma.cost.findMany({ where: { projectId } });
+    return costs;
+  } catch (error) {
+    console.error(error);
+    throw new Error('Erreur lors de la récupération des coûts du projet');
+  }
+}
+
+export async function getProjectsWithTotalCost(email: string): Promise<(Project & { totalCost: number })[]> {
+  try {
+    const projects = await prisma.project.findMany({
+      where: { createdBy: { email } },
+      include: {
+        costs: true,
+        tasks: {
+          include: { user: true, createdBy: true }
+        },
+        users: {
+          select: {
+            user: {
+              select: { id: true, name: true, email: true, role: true }
+            }
+          }
+        }
+      }
+    });
+    const formattedProjects = projects.map((project: any) => {
+      const totalCost = (project.costs || []).reduce((sum: number, c: any) => sum + (c.spent || 0), 0);
+      return {
+        ...project,
+        users: project.users.map((userEntry: any) => userEntry.user),
+        totalCost
+      };
+    });
+    return formattedProjects;
+  } catch (error) {
+    console.error(error);
+    throw new Error;
+  }
 }
 
 

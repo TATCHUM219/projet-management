@@ -14,6 +14,7 @@ model User {
   id           String       @id @default(uuid())
   name         String
   email        String       @unique
+  role         String       @default("USER") 
   tasks        Task[]
   createdTasks Task[]       @relation("CreatedTasks")
   projects     Project[]    @relation("UserProjects")
@@ -31,6 +32,8 @@ model Project {
   createdById String
   createdBy   User         @relation("UserProjects", fields: [createdById], references: [id])
   users       ProjectUser[]
+  resources   Resource[]   // back-relation
+  costs       Cost[]       // back-relation
 }
 
 model Task {
@@ -46,6 +49,7 @@ model Task {
   createdById         String
   createdBy           User     @relation("CreatedTasks", fields: [createdById], references: [id])
   solutionDescription String?
+  taskResources       TaskResource[] // back-relation
 }
 
 model ProjectUser {
@@ -57,3 +61,30 @@ model ProjectUser {
   @@unique([userId, projectId])
 }
 
+model Resource {
+  id        String   @id @default(uuid())
+  name      String
+  type      String   // "HUMAN" ou "MATERIAL"
+  cost      Float    // coût horaire ou unitaire
+  project   Project? @relation(fields: [projectId], references: [id])
+  projectId String?
+  taskResources TaskResource[] // back-relation
+}
+
+model TaskResource {
+  id         String   @id @default(uuid())
+  task       Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  taskId     String
+  resource   Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  resourceId String
+  quantity   Float?   // nombre d'heures ou quantité utilisée
+}
+
+model Cost {
+  id        String   @id @default(uuid())
+  project   Project  @relation(fields: [projectId], references: [id])
+  projectId String
+  budget    Float
+  spent     Float
+  updatedAt DateTime @updatedAt
+}

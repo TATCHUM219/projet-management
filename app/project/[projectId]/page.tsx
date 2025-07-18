@@ -12,6 +12,9 @@ import React, { useEffect, useState } from 'react'
 import EmptyState from '@/app/components/EmptyState'
 import TaskComponent from '@/app/components/TaskComponent';
 import { toast } from 'react-toastify';
+import ResourceList from '@/app/components/ResourceList';
+import CostSummary from '@/app/components/CostSummary';
+import { getProjectResources, getProjectCosts } from '@/app/actions';
 
 const page = ({ params }: { params: Promise<{ projectId: string }> }) => {
 
@@ -24,12 +27,18 @@ const page = ({ params }: { params: Promise<{ projectId: string }> }) => {
 
     const [assignedFilter, setAssignedFilter] = useState<boolean>(false);
     const [taskCounts, setTaskCounts] = useState({ todo: 0, inProgress: 0, done: 0, assigned: 0 })
+    const [resources, setResources] = useState([]);
+    const [costs, setCosts] = useState([]);
 
     const fetchInfos = async (projectId: string) => {
         try {
             const project = await getProjectInfo(projectId, true)
             setProject(project)
-          
+            // Ajout récupération ressources et coûts
+            const res = await getProjectResources(projectId);
+            setResources(res);
+            const c = await getProjectCosts(projectId);
+            setCosts(c);
         } catch (error) {
             console.error('Erreur lors du chargement du projet:', error);
         }
@@ -91,6 +100,10 @@ const page = ({ params }: { params: Promise<{ projectId: string }> }) => {
                         {project && (
                             <ProjectComponent project={project} admin={0} style={false}></ProjectComponent>
                         )}
+                        {/* Affichage des ressources */}
+                        <ResourceList resources={resources} />
+                        {/* Affichage des coûts */}
+                        <CostSummary costs={costs} />
                     </div>
                 </div>
 

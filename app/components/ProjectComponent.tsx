@@ -61,6 +61,9 @@ const ProjectComponent: FC<ProjectProps> = ({ project, admin, style, onDelete })
                 <div className='badge ml-3 font-bold'>
                     {project.name}
                 </div>
+                {typeof project.totalCost !== 'undefined' && (
+                  <span className='ml-4 badge badge-secondary'>Coût total : {project.totalCost} FCFA</span>
+                )}
             </div>
 
             {style == false && (

@@ -45,7 +45,7 @@ const Navbar = () => {
                         <FolderGit2 className='w-6 h-6' />
                     </div>
                     <span className='ml-3 font-bold text-3xl'>
-                        Task <span className='text-primary'>Flow</span>
+                        Gestion de <span className='text-primary'>Projets</span>
                     </span>
                 </div>
 

@@ -4,12 +4,13 @@ import Image from "next/image";
 import Wrapper from "./components/Wrapper";
 import { useEffect, useState } from "react";
 import { FolderGit2 } from "lucide-react";
-import { createProject, deleteProjectById, getProjectsCreatedByUser } from "./actions";
+import { createProject, deleteProjectById, getProjectsCreatedByUser, getProjectsWithTotalCost } from "./actions";
 import { useUser } from "@clerk/nextjs";
 import { toast } from "react-toastify";
 import { Project } from "@/type";
 import ProjectComponent from "./components/ProjectComponent";
 import EmptyState from "./components/EmptyState";
+
 
 export default function Home() {
 
@@ -18,10 +19,16 @@ export default function Home() {
   const [name, setName] = useState("")
   const [descrition, setDescription] = useState("")
   const [projects, setProjects] = useState<Project[]>([])
+    const [role, setRole] = useState<string | null>(null);
+  const [resources, setResources] = useState<Resource[]>([]);
+  const [showResourceModal, setShowResourceModal] = useState(false);
+  const [resourceName, setResourceName] = useState('');
+  const [resourceType, setResourceType] = useState('HUMAN');
+  const [resourceCost, setResourceCost] = useState('');
 
   const fetchProjects = async (email: string) => {
     try {
-      const myproject = await getProjectsCreatedByUser(email)
+      const myproject = await getProjectsWithTotalCost(email)
       setProjects(myproject)
       console.log(myproject)
     } catch (error) {
@@ -30,10 +37,10 @@ export default function Home() {
   }
 
   useEffect(() => {
-    if (email) {
-      fetchProjects(email)
+    if (user && email) {
+      fetchProjects(email);
     }
-  }, [email])
+  }, [user, email]);
 
   const deleteProject = async (projectId: string) => {
     try {
@@ -46,14 +53,18 @@ export default function Home() {
   }
 
   const handleSubmit = async () => {
+    if (!name.trim() || !descrition.trim()) {
+      toast.error('Veuillez remplir tous les champs du projet');
+      return;
+    }
     try {
       const modal = document.getElementById('my_modal_3') as HTMLDialogElement
       const project = await createProject(name, descrition, email)
       if (modal) {
         modal.close()
       }
-      setName(""),
-        setDescription("")
+      setName("");
+      setDescription("");
       fetchProjects(email)
       toast.success("Projet Créé")
     } catch (error) {
@@ -64,8 +75,10 @@ export default function Home() {
   return (
     <Wrapper>
       <div>
+        {/* Onglet/bouton pour accéder à la page des ressources */}
+        <a href="/resources" className="btn btn-secondary mb-4">Gérer les ressources</a>
         {/* You can open the modal using document.getElementById('ID').showModal() method */}
-        <button className="btn  btn-primary mb-6" onClick={() => (document.getElementById('my_modal_3') as HTMLDialogElement).showModal()}>  Nouveau Projet <FolderGit2 /></button>
+     {role!=="ADMIN" &&(   <button className="btn  btn-primary mb-6" onClick={() => (document.getElementById('my_modal_3') as HTMLDialogElement).showModal()}>  Nouveau Projet <FolderGit2 /></button>)}
 
         <dialog id="my_modal_3" className="modal">
           <div className="modal-box">
@@ -73,6 +86,7 @@ export default function Home() {
               {/* if there is a button in form, it will close the modal */}
               <button className="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
             </form>
+            
             <h3 className="font-bold text-lg">Nouveau Projet</h3>
             <p className="py-4">Décrivez votre projet simplement grâce à la description </p>
             <div>
@@ -92,9 +106,9 @@ export default function Home() {
                 required
               >
               </textarea>
-              <button className="btn btn-primary" onClick={handleSubmit}>
+            {role=="ADMIN"}&&(  <button className="btn btn-primary" onClick={handleSubmit}>
                 Nouveau Projet <FolderGit2 />
-              </button>
+              </button>)
             </div>
           </div>
         </dialog>
@@ -105,7 +119,11 @@ export default function Home() {
             <ul className="w-full grid md:grid-cols-3 gap-6">
               {projects.map((project) => (
                 <li key={project.id}>
-                  <ProjectComponent project={project} admin={1} style={true} onDelete={deleteProject}></ProjectComponent>
+                  <ProjectComponent project={project} admin={1} style={true} onDelete={deleteProject}>
+                    <div className="mt-2 text-sm text-gray-700 font-semibold">
+                      Coût total&nbsp;: <span className="badge badge-secondary">{project.totalCost ?? 0} FCFA</span>
+                    </div>
+                  </ProjectComponent>
                 </li>
               ))}
             </ul>

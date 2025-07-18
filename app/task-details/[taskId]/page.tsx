@@ -10,6 +10,8 @@ import ReactQuill from 'react-quill-new';
 import { toast } from 'react-toastify';
 import 'react-quill-new/dist/quill.snow.css';
 import { useUser } from '@clerk/nextjs';
+import ResourceList from '@/app/components/ResourceList';
+import { getTaskResources, getProjectResources } from '@/app/actions';
 
 const page = ({ params }: { params: Promise<{ taskId: string }> }) => {
   const { user } = useUser();
@@ -22,6 +24,11 @@ const page = ({ params }: { params: Promise<{ taskId: string }> }) => {
   const [status, setStatus] = useState("");
   const [realStatus, setRealStatus] = useState("");
   const [solution, setSolution] = useState("");
+  const [taskResources, setTaskResources] = useState([]);
+  const [allResources, setAllResources] = useState([]);
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [selectedResource, setSelectedResource] = useState(null);
+  const [quantity, setQuantity] = useState(1);
 
   const modules = {
     toolbar: [
@@ -43,6 +50,13 @@ const page = ({ params }: { params: Promise<{ taskId: string }> }) => {
       setStatus(task.status)
       setRealStatus(task.status)
       fetchProject(task.projectId)
+      // Ajout récupération ressources assignées
+      const tr = await getTaskResources(taskId);
+      setTaskResources(tr);
+      // Récupère toutes les ressources globales pour l'assignation
+      const res = await fetch('/api/resource');
+      const all = await res.json();
+      setAllResources(all);
     } catch (error) {
       toast.error("Erreur lors du chargement des détails de la tâche.");
     }
@@ -146,6 +160,73 @@ const page = ({ params }: { params: Promise<{ taskId: string }> }) => {
           </div>
 
           <h1 className='font-semibold italic text-2xl mb-4'>{task.name}</h1>
+
+          {/* Affichage des ressources assignées */}
+          <div className='mb-4'>
+            <div className='flex items-center justify-between'>
+              <span className='font-bold'>Ressources assignées</span>
+              <button className='btn btn-sm btn-primary' onClick={() => setShowAssignModal(true)}>
+                Assigner une ressource
+              </button>
+            </div>
+            <ResourceList
+              resources={taskResources.map(tr => ({...tr.resource, cost: tr.resource?.cost || 0}))}
+              showQuantity={true}
+              quantities={Object.fromEntries(taskResources.map(tr => [tr.resourceId, tr.quantity]))}
+              onDelete={async (resourceId) => {
+                // Trouver l'id du TaskResource à supprimer
+                const tr = taskResources.find(tr => tr.resourceId === resourceId);
+                if (!tr) return;
+                try {
+                  await fetch(`/api/resource/assign/${tr.id}`, { method: 'DELETE' });
+                  fetchInfos(taskId);
+                  toast.success('Ressource supprimée !');
+                } catch (e) {
+                  toast.error('Erreur lors de la suppression');
+                }
+              }}
+            />
+          </div>
+
+          {/* Modal d'assignation */}
+          {showAssignModal && (
+            <dialog open className="modal">
+              <div className="modal-box">
+                <form method="dialog">
+                  <button className="btn btn-sm btn-circle btn-ghost absolute right-2 top-2" onClick={() => setShowAssignModal(false)}>✕</button>
+                </form>
+                <h3 className="font-bold text-lg mb-3">Assigner une ressource</h3>
+                <div className="mb-2">
+                  <select className="select select-bordered w-full" value={selectedResource || ''} onChange={e => setSelectedResource(e.target.value)}>
+                    <option value="">Choisir une ressource</option>
+                    {allResources.map((r: any) => (
+                      <option key={r.id} value={r.id}>{r.name} ({r.type})</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="mb-2">
+                  <input type="number" min={1} className="input input-bordered w-full" placeholder="Quantité ou heures" value={quantity} onChange={e => setQuantity(Number(e.target.value))} />
+                </div>
+                <button className="btn btn-primary w-full" onClick={async () => {
+                  if (!selectedResource) return;
+                  try {
+                    await fetch('/api/resource/assign', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ taskId, resourceId: selectedResource, quantity })
+                    });
+                    setShowAssignModal(false);
+                    fetchInfos(taskId);
+                    toast.success('Ressource assignée !');
+                  } catch (e) {
+                    toast.error('Erreur lors de l\'assignation');
+                  }
+                }}>
+                  Assigner
+                </button>
+              </div>
+            </dialog>
+          )}
 
           <div className='flex justify-between items-center mb-4'>
             <span>
