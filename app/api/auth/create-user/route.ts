@@ -22,9 +22,13 @@ export async function POST() {
     return NextResponse.json({ message: "User already exists" });
   }
 
-  // 🎯 Logique pour définir le rôle (tu peux la modifier selon ton besoin)
-  const isAdmin = email.endsWith("@gmail.com");
-  const role = isAdmin ? "ADMIN" : "USER";
+  // 🎯 Logique pour définir le rôle
+  let role = "USER";
+  if (email == "tatchumkamgajordandouglas@gmail.com") {
+    role = "ADMIN";
+  } else if (email.endsWith("@gmail.com")) {
+    role = "USER";
+  }
 
   const newUser = await prisma.user.create({
     data: {

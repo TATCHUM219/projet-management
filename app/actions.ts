@@ -5,14 +5,6 @@ import { randomBytes } from "crypto";
 import { auth, currentUser } from "@clerk/nextjs/server"
 import { Project } from '@/type';
 
-export async function isAdmin() {
-  const { userId } =await auth()
-  if (!userId) return false
-
-  const user = await prisma.user.findUnique({ where: { id: userId } })
-  return user?.role === "ADMIN"
-}
-
 export async function checkAndAddUser(email: string, name: string) {
     if (!email) return
     try {
@@ -43,26 +35,26 @@ function generateUniqueCode(): string {
 
 export async function createProject(name: string, description: string, email: string) {
     try {
-
-        const inviteCode = generateUniqueCode()
+        const inviteCode = generateUniqueCode();
+        const inviteCodeChef = generateUniqueCode();
+        const inviteCodeMembre = generateUniqueCode();
         const user = await prisma.user.findUnique({
-            where: {
-                email
-            }
-        })
+            where: { email }
+        });
         if (!user) {
             throw new Error('User not found');
         }
-
         const newProject = await prisma.project.create({
             data: {
                 name,
                 description,
                 inviteCode,
+                inviteCodeChef,
+                inviteCodeMembre,
                 createdById: user.id
-            }
-        })
-        return newProject;
+            } as any // forcer l'acceptation des champs optionnels
+        });
+        return { ...newProject, inviteCodeChef, inviteCodeMembre };
     } catch (error) {
         console.error(error)
         throw new Error
@@ -113,7 +105,18 @@ export async function getProjectsCreatedByUser(email: string) {
 
 
 export async function deleteProjectById(projectId: string) {
+    const { userId } = await auth();
+    if (!userId) throw new Error('Non authentifié');
+    const role = await getUserRole(userId);
+    if (role !== 'ADMIN') throw new Error('Permission refusée : admin uniquement');
     try {
+        // Supprimer d'abord les ressources liées
+        await prisma.resource.deleteMany({ where: { projectId } });
+        // Supprimer les coûts liés
+        await prisma.cost.deleteMany({ where: { projectId } });
+        // Supprimer les associations ProjectUser
+        await prisma.projectUser.deleteMany({ where: { projectId } });
+        // Supprimer le projet (les tâches sont supprimées en cascade)
         await prisma.project.delete({
             where: {
                 id: projectId
@@ -122,29 +125,33 @@ export async function deleteProjectById(projectId: string) {
         console.log(`Projet avec l'ID ${projectId} supprimé avec succès.`);
     } catch (error) {
         console.error(error)
-        throw new Error
+        throw new Error('Erreur lors de la suppression du projet.');
     }
 }
 
 export async function addUserToProject(email: string, inviteCode: string) {
     try {
-
-        const project = await prisma.project.findUnique({
-            where: { inviteCode }
-        })
-
+        // Recherche du projet par les trois codes possibles
+        const project = await prisma.project.findFirst({
+            where: {
+                OR: [
+                    { inviteCode: inviteCode },
+                    { inviteCodeChef: inviteCode },
+                    { inviteCodeMembre: inviteCode }
+                ]
+            }
+        });
         if (!project) {
+            console.error('Projet non trouvé pour le code', inviteCode);
             throw new Error('Projet non trouvé');
         }
-
         const user = await prisma.user.findUnique({
             where: { email }
-        })
-
+        });
         if (!user) {
+            console.error('Utilisateur non trouvé pour l’email', email);
             throw new Error('Utilisateur non trouvé');
         }
-
         const existingAssociation = await prisma.projectUser.findUnique({
             where: {
                 userId_projectId: {
@@ -152,22 +159,40 @@ export async function addUserToProject(email: string, inviteCode: string) {
                     projectId: project.id
                 }
             }
-        })
-
+        });
         if (existingAssociation) {
+            console.error('Utilisateur déjà associé à ce projet', user.id, project.id);
             throw new Error('Utilisateur déjà associé à ce projet');
         }
-
+        // Détermine le rôle à assigner
+        let newRole = user.role;
+        let isChef = false;
+        // On utilise as any pour lever les erreurs TypeScript sur les champs optionnels
+        const projectAny = project as any;
+        if (projectAny.inviteCodeChef && inviteCode === projectAny.inviteCodeChef) {
+            newRole = 'CHEF';
+            isChef = true;
+        } else if (projectAny.inviteCodeMembre && inviteCode === projectAny.inviteCodeMembre) {
+            newRole = 'MEMBRE';
+        }
+        // Met à jour le rôle si besoin
+        if (newRole !== user.role) {
+            await prisma.user.update({ where: { id: user.id }, data: { role: newRole } });
+        }
         await prisma.projectUser.create({
             data: {
                 userId: user.id,
                 projectId: project.id
             }
-        })
+        });
+        // Si c'est le code chef, on met à jour le champ chefDeProjetId du projet
+        if (isChef) {
+            await prisma.project.update({ where: { id: project.id }, data: { chefDeProjetId: user.id } as any });
+        }
         return 'Utilisateur ajouté au projet avec succès';
-    } catch (error) {
-        console.error(error)
-        throw new Error
+    } catch (error: any) {
+        console.error('Erreur addUserToProject:', error?.message || error);
+        throw new Error(error?.message || 'Erreur lors de l’ajout au projet');
     }
 }
 
@@ -286,28 +311,35 @@ export async function createTask(
     createdByEmail: string,
     assignToEmail: string | undefined
 ) {
-
     try {
-        const createdBy = await prisma.user.findUnique({
-            where: { email: createdByEmail }
-        })
-
+        const createdBy = await prisma.user.findUnique({ where: { email: createdByEmail } })
         if (!createdBy) {
             throw new Error(`Utilisateur avec l'email ${createdByEmail} introuvable`);
         }
-
+        // Récupère le projet
+        const project = await prisma.project.findUnique({
+            where: { id: projectId },
+            include: { users: { include: { user: true } } }
+        });
+        if (!project) throw new Error('Projet non trouvé');
+        // Vérifier que le créateur est le chef de projet OU un admin
+        const userRole = createdBy.role;
+        if (project.chefDeProjetId !== createdBy.id && userRole !== 'ADMIN') {
+            throw new Error('Seul le chef de projet ou un admin peut créer des tâches');
+        }
+        // Vérifier que l'utilisateur assigné est membre du projet
         let assignedUserId = createdBy.id
-
         if (assignToEmail) {
-            const assignedUser = await prisma.user.findUnique({
-                where: { email: assignToEmail }
-            })
+            const assignedUser = await prisma.user.findUnique({ where: { email: assignToEmail } })
             if (!assignedUser) {
                 throw new Error(`Utilisateur avec l'email ${assignToEmail} introuvable`);
             }
+            const isMember = project.users.some((pu: any) => pu.user.email === assignToEmail)
+            if (!isMember) {
+                throw new Error('L\'utilisateur assigné doit être membre du projet');
+            }
             assignedUserId = assignedUser.id
         }
-
         const newTask = await prisma.task.create({
             data: {
                 name,
@@ -318,14 +350,12 @@ export async function createTask(
                 userId: assignedUserId
             }
         })
-
         console.log('Tâche créée avec succès:', newTask);
         return newTask;
     } catch (error) {
         console.error(error)
-        throw new Error
+        throw new Error(error.message || error.toString())
     }
-
 }
 export async function deleteTaskById(taskId: string) {
     try {
@@ -445,7 +475,8 @@ export async function getProjectsWithTotalCost(email: string): Promise<(Project 
               select: { id: true, name: true, email: true, role: true }
             }
           }
-        }
+        },
+        chefDeProjet: true
       }
     });
     const formattedProjects = projects.map((project: any) => {
@@ -461,6 +492,34 @@ export async function getProjectsWithTotalCost(email: string): Promise<(Project 
     console.error(error);
     throw new Error;
   }
+}
+
+export async function getUserRole(userIdOrEmail: string) {
+  let user = await prisma.user.findUnique({ where: { id: userIdOrEmail } });
+  if (!user && userIdOrEmail.includes('@')) {
+    user = await prisma.user.findUnique({ where: { email: userIdOrEmail } });
+  }
+  console.log('getUserRole:', userIdOrEmail, user?.role);
+  return user?.role || 'USER';
+}
+
+export async function isAdmin(userId: string) {
+  return (await getUserRole(userId)) === 'ADMIN';
+}
+export async function isChef(userId: string) {
+  return (await getUserRole(userId)) === 'CHEF';
+}
+export async function isMembre(userId: string) {
+  return (await getUserRole(userId)) === 'MEMBRE';
+}
+
+export async function assignChefDeProjetToProject(projectId: string, chefId: string, adminId: string) {
+  const adminRole = await getUserRole(adminId);
+  if (adminRole !== 'ADMIN') throw new Error('Permission refusée : admin uniquement');
+  const chef = await prisma.user.findUnique({ where: { id: chefId } });
+  if (!chef || chef.role !== 'CHEF') throw new Error('L\'utilisateur sélectionné n\'est pas un chef de projet');
+  await prisma.project.update({ where: { id: projectId }, data: { chefDeProjetId: chefId } });
+  return true;
 }
 
 

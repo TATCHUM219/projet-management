@@ -7,7 +7,7 @@ import { FolderGit2 } from "lucide-react";
 import { createProject, deleteProjectById, getProjectsCreatedByUser, getProjectsWithTotalCost } from "./actions";
 import { useUser } from "@clerk/nextjs";
 import { toast } from "react-toastify";
-import { Project } from "@/type";
+import { Project, Resource } from "@/type";
 import ProjectComponent from "./components/ProjectComponent";
 import EmptyState from "./components/EmptyState";
 
@@ -25,30 +25,41 @@ export default function Home() {
   const [resourceName, setResourceName] = useState('');
   const [resourceType, setResourceType] = useState('HUMAN');
   const [resourceCost, setResourceCost] = useState('');
+  const [lastCodes, setLastCodes] = useState<{chef?: string, membre?: string} | null>(null);
 
   const fetchProjects = async (email: string) => {
     try {
       const myproject = await getProjectsWithTotalCost(email)
       setProjects(myproject)
-      console.log(myproject)
+      myproject.forEach((p: any) => {
+        console.log(`Chef du projet ${p.name} : ${p.chefDeProjet?.email || '-'}`);
+      });
+      // console.log(myproject)
     } catch (error) {
       console.error('Erreur lors du chargement des projets:', error);
     }
   }
 
   useEffect(() => {
-    if (user && email) {
+    if (user && user.primaryEmailAddress?.emailAddress) {
+      const email = user.primaryEmailAddress.emailAddress;
       fetchProjects(email);
+      fetch(`/api/user/${email}`)
+        .then(res => res.json())
+        .then(data => {
+          setRole(data.role || null);
+          console.log('Rôle utilisateur connecté:', data.role);
+        });
     }
-  }, [user, email]);
+  }, [user]);
 
   const deleteProject = async (projectId: string) => {
     try {
       await deleteProjectById(projectId)
-      fetchProjects(email)
+      setProjects(projects.filter(p => p.id !== projectId))
       toast.success('Project supprimé !')
-    } catch (error) {
-      throw new Error('Error deleting project: ' + error);
+    } catch (error: any) {
+      toast.error('Erreur lors de la suppression du projet.');
     }
   }
 
@@ -65,7 +76,9 @@ export default function Home() {
       }
       setName("");
       setDescription("");
-      fetchProjects(email)
+      // Ajoute le projet sans rechargement
+      setProjects([project, ...projects])
+      setLastCodes({ chef: project.inviteCodeChef, membre: project.inviteCodeMembre });
       toast.success("Projet Créé")
     } catch (error) {
       console.error('Error creating project:', error);
@@ -76,9 +89,15 @@ export default function Home() {
     <Wrapper>
       <div>
         {/* Onglet/bouton pour accéder à la page des ressources */}
-        <a href="/resources" className="btn btn-secondary mb-4">Gérer les ressources</a>
-        {/* You can open the modal using document.getElementById('ID').showModal() method */}
-     {role!=="ADMIN" &&(   <button className="btn  btn-primary mb-6" onClick={() => (document.getElementById('my_modal_3') as HTMLDialogElement).showModal()}>  Nouveau Projet <FolderGit2 /></button>)}
+        {role =='ADMIN' && (
+          <a href="/resources" className="btn btn-secondary mb-4">Gérer les ressources</a>
+        )}
+        {/* Bouton de création de projet visible uniquement pour admin */}
+        {role == 'ADMIN' && (
+          <button className="btn  btn-primary mb-6" onClick={() => (document.getElementById('my_modal_3') as HTMLDialogElement).showModal()}>
+            Nouveau Projet <FolderGit2 />
+          </button>
+        )}
 
         <dialog id="my_modal_3" className="modal">
           <div className="modal-box">
@@ -114,16 +133,29 @@ export default function Home() {
         </dialog>
 
         <div className="w-full">
+          {lastCodes && (
+            <div className="mb-4">
+              <div className="font-bold">Codes d'invitation :</div>
+              <div className="flex gap-2 items-center mt-2">
+                <span className="badge badge-primary">Chef de projet</span>
+                <span className="select-all bg-base-200 px-2 py-1 rounded">{lastCodes.chef}</span>
+                <button className="btn btn-xs" onClick={() => navigator.clipboard.writeText(lastCodes.chef || '')}>Copier</button>
+              </div>
+              {role === 'ADMIN' && (
+                <div className="flex gap-2 items-center mt-2">
+                  <span className="badge badge-secondary">Membre</span>
+                  <span className="select-all bg-base-200 px-2 py-1 rounded">{lastCodes.membre}</span>
+                  <button className="btn btn-xs" onClick={() => navigator.clipboard.writeText(lastCodes.membre || '')}>Copier</button>
+                </div>
+              )}
+            </div>
+          )}
 
           {projects.length > 0 ? (
             <ul className="w-full grid md:grid-cols-3 gap-6">
               {projects.map((project) => (
                 <li key={project.id}>
-                  <ProjectComponent project={project} admin={1} style={true} onDelete={deleteProject}>
-                    <div className="mt-2 text-sm text-gray-700 font-semibold">
-                      Coût total&nbsp;: <span className="badge badge-secondary">{project.totalCost ?? 0} FCFA</span>
-                    </div>
-                  </ProjectComponent>
+                  <ProjectComponent project={project} admin={role === 'ADMIN' ? 1 : 0} style={true} onDelete={deleteProject} />
                 </li>
               ))}
             </ul>

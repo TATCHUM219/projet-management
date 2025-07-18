@@ -20,6 +20,7 @@ const page = ({ params }: { params: Promise<{ projectId: string }> }) => {
 
     const { user } = useUser();
     const email = user?.primaryEmailAddress?.emailAddress;
+    const [role, setRole] = useState<string | null>(null);
 
     const [projectId, setProjectId] = useState("");
     const [project, setProject] = useState<Project | null>(null);
@@ -66,12 +67,24 @@ const page = ({ params }: { params: Promise<{ projectId: string }> }) => {
         }
     }, [project])
 
+    useEffect(() => {
+        if (email) {
+            fetch(`/api/user/${email}`)
+                .then(res => res.json())
+                .then(data => setRole(data.role || null));
+        }
+    }, [email]);
 
+
+    // Filtrer les tâches pour n'afficher que celles assignées à l'utilisateur courant (sauf admin/chef)
+    const isAdminOrChef = project && (user && (project.chefDeProjetId === user.id || role === 'ADMIN'));
     const filteredTasks = project?.tasks?.filter(task => {
-        const statusMatch = !statusFilter || task.status == statusFilter
-        const assignedMatch = !assignedFilter || task?.user?.email == email
-        return statusMatch && assignedMatch
-    })
+        if (!isAdminOrChef) {
+            return task?.user?.email === email;
+        }
+        const statusMatch = !statusFilter || task.status == statusFilter;
+        return statusMatch;
+    });
 
     const deleteTask = async ( taskId : string) => {
         try {
@@ -148,10 +161,13 @@ const page = ({ params }: { params: Promise<{ projectId: string }> }) => {
                                 </button>
                             </div>
                         </div>
-                        <Link href={`/new-tasks/${projectId}`} className='btn btn-sm mt-2 md:mt-0'>
-                            Nouvelle tâche
-                            <CopyPlus className='w-4' />
-                        </Link>
+                        {/* Bouton de création de tâche visible uniquement pour admin ou chef de projet */}
+                        {isAdminOrChef && (
+                          <Link href={`/new-tasks/${projectId}`} className='btn btn-sm mt-2 md:mt-0'>
+                              Nouvelle tâche
+                              <CopyPlus className='w-4' />
+                          </Link>
+                        )}
                     </div>
                     <div className='mt-6 border border-base-300 p-5 shadow-sm rounded-xl'>
 

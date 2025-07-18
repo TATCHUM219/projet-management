@@ -19,6 +19,7 @@ model User {
   createdTasks Task[]       @relation("CreatedTasks")
   projects     Project[]    @relation("UserProjects")
   userProjects ProjectUser[]
+  projetsChef  Project[]    @relation("ChefDeProjet")
 }
 
 model Project {
@@ -29,8 +30,12 @@ model Project {
   updatedAt   DateTime     @updatedAt
   tasks       Task[]
   inviteCode  String       @unique
+  inviteCodeChef String?    @unique
+  inviteCodeMembre String? @unique
   createdById String
   createdBy   User         @relation("UserProjects", fields: [createdById], references: [id])
+  chefDeProjetId String?
+  chefDeProjet   User?     @relation("ChefDeProjet", fields: [chefDeProjetId], references: [id])
   users       ProjectUser[]
   resources   Resource[]   // back-relation
   costs       Cost[]       // back-relation

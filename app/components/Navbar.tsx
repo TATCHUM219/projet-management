@@ -18,6 +18,16 @@ const Navbar = () => {
         },
         {
             href: "/", label: "Mes projets"
+        },
+        // Profil et ressources visibles uniquement pour admin
+        {
+            href: "/profile", label: "Profil", adminOnly: true
+        },
+        {
+            href: "/resources", label: "Ressources", adminOnly: true
+        },
+        {
+            href: "/profile/admin-users", label: "Utilisateurs", adminOnly: true
         }
     ]
 
@@ -31,7 +41,7 @@ const Navbar = () => {
         pathname.replace(/\/$/, "") === href.replace(/\/$/, "");
 
     const renderLinks = (classNames: string) =>
-        navLinks.map(({ href, label }) => {
+        navLinks.filter(link => !link.adminOnly || (user && user.publicMetadata?.role === 'ADMIN')).map(({ href, label }) => {
             return <Link key={href} href={href} className={`btn-sm ${classNames} ${isActiveLink(href) ? "btn-primary" : ""}`}>
                 {label}
             </Link>
