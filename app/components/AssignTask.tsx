@@ -1,5 +1,5 @@
 import { User } from '@prisma/client'
-import React, { FC, use, useState } from 'react'
+import React, { FC, useState } from 'react'
 import UserInfo from './UserInfo';
 
 interface AssignTaskProps {

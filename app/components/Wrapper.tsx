@@ -1,4 +1,3 @@
-import { FolderGit2 } from 'lucide-react'
 import React from 'react'
 import Navbar from './Navbar'
 import { ToastContainer } from 'react-toastify'

@@ -4,7 +4,7 @@ import { deleteTaskById, getProjectInfo } from '@/app/actions';
 import ProjectComponent from '@/app/components/ProjectComponent';
 import UserInfo from '@/app/components/UserInfo';
 import Wrapper from '@/app/components/Wrapper'
-import { Project } from '@/type';
+import { Project, Resource, Cost } from '@/type';
 import { useUser } from '@clerk/nextjs';
 import { CircleCheckBig, CopyPlus, ListTodo, Loader, SlidersHorizontal, UserCheck } from 'lucide-react';
 import Link from 'next/link';
@@ -28,8 +28,8 @@ const Page = ({ params }: { params: Promise<{ projectId: string }> }) => {
 
     const [assignedFilter, setAssignedFilter] = useState<boolean>(false);
     const [taskCounts, setTaskCounts] = useState({ todo: 0, inProgress: 0, done: 0, assigned: 0 })
-    const [resources, setResources] = useState<any[]>([]);
-    const [costs, setCosts] = useState<any[]>([]);
+    const [resources, setResources] = useState<Resource[]>([]);
+    const [costs, setCosts] = useState<Cost[]>([]);
 
     const fetchInfos = async (projectId: string) => {
         try {
@@ -37,9 +37,9 @@ const Page = ({ params }: { params: Promise<{ projectId: string }> }) => {
             setProject(project as Project)
             // Ajout récupération ressources et coûts
             const res = await getProjectResources(projectId);
-            setResources(res);
+            setResources(res.map((r: any) => ({ ...r, projectId: r.projectId ?? undefined })));
             const c = await getProjectCosts(projectId);
-            setCosts(c);
+            setCosts(c.map((cost: any) => ({ ...cost, updatedAt: typeof cost.updatedAt === 'string' ? cost.updatedAt : cost.updatedAt.toISOString() })));
         } catch {
             console.error('Erreur lors du chargement du projet');
         }

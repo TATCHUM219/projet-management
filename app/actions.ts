@@ -2,20 +2,9 @@
 
 import { auth } from '@clerk/nextjs/server';
 import prisma from '@/lib/prisma';
-import { Project, Task, Resource, Cost, TaskResource } from '@/type';
+import { Project, Task } from '@/type';
 
 // Type definitions for Prisma includes
-type ProjectWithUsers = Project & {
-  users: {
-    user: {
-      id: string;
-      name: string;
-      email: string;
-      role: string;
-    };
-  }[];
-};
-
 type ProjectWithOptionalFields = Project & {
   inviteCodeChef?: string | null;
   inviteCodeMembre?: string | null;
@@ -28,18 +17,6 @@ type ProjectUserEntry = {
     email: string;
     role?: string;
   };
-};
-
-type ProjectWithCosts = Project & {
-  costs: Cost[];
-  users: ProjectUserEntry[];
-  tasks: Task[];
-  chefDeProjet: {
-    id: string;
-    name: string;
-    email: string;
-    role: string;
-  } | null;
 };
 
 export async function checkAndAddUser(email: string, name: string) {

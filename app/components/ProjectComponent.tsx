@@ -1,6 +1,6 @@
 "use client"
 import { Project } from '@/type'
-import { Copy, ExternalLink, FolderGit2, Trash } from 'lucide-react';
+import { ExternalLink, FolderGit2, Trash } from 'lucide-react';
 import Link from 'next/link';
 import React, { FC } from 'react'
 import { toast } from 'react-toastify';
@@ -18,7 +18,6 @@ const ProjectComponent: FC<ProjectProps> = ({ project, admin, style, onDelete })
     const [editMode, setEditMode] = useState(false);
     const [name, setName] = useState(project.name);
     const [description, setDescription] = useState(project.description || '');
-    const [chef, setChef] = useState(project.chefDeProjet);
     const [saving, setSaving] = useState(false);
 
     if (project.chefDeProjet && project.chefDeProjet.email) {
@@ -51,24 +50,13 @@ const ProjectComponent: FC<ProjectProps> = ({ project, admin, style, onDelete })
 
     const textSizeClass = style ? 'text-sm' : 'text-md'
 
-    const handleCopyCode = async () => {
-        try {
-            if (project.inviteCode) {
-                await navigator.clipboard.writeText(project.inviteCode)
-                toast.success("Code d'invitation copié")
-            }
-        } catch (error) {
-            toast.error("Erreur lors de la copie du code d'invitation.")
-        }
-    }
-
     const handleSave = async () => {
         setSaving(true);
         try {
             const res = await fetch(`/api/project/${project.id}/edit`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, description, chefId: chef?.id })
+                body: JSON.stringify({ name, description, chefId: project.chefDeProjet?.id })
             });
             if (!res.ok) throw new Error('Erreur lors de la sauvegarde');
             toast.success('Projet mis à jour !');
