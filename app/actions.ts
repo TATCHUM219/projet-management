@@ -239,6 +239,7 @@ export async function getProjectsAssociatedWithUser(email: string) {
                                 id: true,
                                 name: true,
                                 email: true,
+                                role: true,
                             }
                         }
                     }
@@ -280,6 +281,7 @@ export async function getProjectInfo(idProject: string, details: boolean) {
                                 id: true,
                                 name: true,
                                 email: true,
+                                role: true,
                             }
                         }
                     }
