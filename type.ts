@@ -45,6 +45,7 @@ export type Project = PrismaProject & {
   costs?: Cost[];
   chefDeProjetId?: string;
   chefDeProjet?: User;
+  totalCost?: number;
 };
 
 export type Task = PrismaTask & {
