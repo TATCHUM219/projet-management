@@ -184,7 +184,11 @@ const Page = ({ params }: { params: Promise<{ taskId: string }> }) => {
               </button>
             </div>
             <ResourceList
-              resources={taskResources.map(tr => ({...tr.resource, cost: tr.resource?.cost || 0}))}
+              resources={taskResources.map(tr => ({
+                ...tr.resource, 
+                cost: tr.resource?.cost || 0,
+                projectId: tr.resource.projectId || undefined
+              }))}
               showQuantity={true}
               quantities={Object.fromEntries(taskResources.map(tr => [tr.resourceId, tr.quantity]))}
               onDelete={async (resourceId) => {
