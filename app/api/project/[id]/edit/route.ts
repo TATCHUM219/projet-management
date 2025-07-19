@@ -10,7 +10,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   const role = await getUserRole(userId);
   if (role !== 'ADMIN') return NextResponse.json({ error: 'Permission refusée : admin uniquement' }, { status: 403 });
   const { name, description, chefId } = await req.json();
-  const data: unknown = {};
+  const data: { name?: string; description?: string | null; chefDeProjetId?: string } = {};
   if (name) data.name = name;
   if (description !== undefined) data.description = description;
   if (chefId !== undefined) data.chefDeProjetId = chefId;
