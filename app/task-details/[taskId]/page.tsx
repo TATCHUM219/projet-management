@@ -13,6 +13,21 @@ import { useUser } from '@clerk/nextjs';
 import ResourceList from '@/app/components/ResourceList';
 import { getTaskResources } from '@/app/actions';
 
+// Type pour TaskResource avec la relation resource incluse
+type TaskResourceWithResource = {
+  id: string;
+  taskId: string;
+  resourceId: string;
+  quantity: number | null;
+  resource: {
+    type: string;
+    id: string;
+    name: string;
+    projectId: string | null;
+    cost: number;
+  };
+};
+
 const Page = ({ params }: { params: Promise<{ taskId: string }> }) => {
   const { user } = useUser();
   const email = user?.primaryEmailAddress?.emailAddress;
@@ -23,7 +38,7 @@ const Page = ({ params }: { params: Promise<{ taskId: string }> }) => {
   const [status, setStatus] = useState("");
   const [realStatus, setRealStatus] = useState("");
   const [solution, setSolution] = useState("");
-  const [taskResources, setTaskResources] = useState([]);
+  const [taskResources, setTaskResources] = useState<TaskResourceWithResource[]>([]);
   const [allResources, setAllResources] = useState([]);
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [selectedResource, setSelectedResource] = useState(null);
