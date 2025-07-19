@@ -18,7 +18,7 @@ export default function ResourcesPage() {
       const res = await fetch("/api/resource");
       const data = await res.json();
       setResources(data);
-    } catch (error) {
+    } catch {
       toast.error("Erreur lors du chargement des ressources");
     }
   };
@@ -61,7 +61,7 @@ export default function ResourcesPage() {
       }
       setShowModal(false);
       fetchResources();
-    } catch (e) {
+    } catch {
       toast.error("Erreur lors de l'enregistrement de la ressource");
     }
   };
@@ -71,7 +71,7 @@ export default function ResourcesPage() {
       await fetch(`/api/resource/${resourceId}`, { method: "DELETE" });
       fetchResources();
       toast.success("Ressource supprimée !");
-    } catch (e) {
+    } catch {
       toast.error("Erreur lors de la suppression");
     }
   };

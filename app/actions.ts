@@ -1,49 +1,82 @@
 "use server"
 
-import prisma from "@/lib/prisma";
-import { randomBytes } from "crypto";
-import { auth } from "@clerk/nextjs/server"
-import { Project } from '@/type';
+import { auth } from '@clerk/nextjs/server';
+import prisma from '@/lib/prisma';
+import { Project, Task, Resource, Cost, TaskResource } from '@/type';
+
+// Type definitions for Prisma includes
+type ProjectWithUsers = Project & {
+  users: {
+    user: {
+      id: string;
+      name: string;
+      email: string;
+      role: string;
+    };
+  }[];
+};
+
+type ProjectWithOptionalFields = Project & {
+  inviteCodeChef?: string | null;
+  inviteCodeMembre?: string | null;
+};
+
+type ProjectUserEntry = {
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    role?: string;
+  };
+};
+
+type ProjectWithCosts = Project & {
+  costs: Cost[];
+  users: ProjectUserEntry[];
+  tasks: Task[];
+  chefDeProjet: {
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+  } | null;
+};
 
 export async function checkAndAddUser(email: string, name: string) {
-    if (!email) return
     try {
-        const existingUser = await prisma.user.findUnique({
-            where: {
-                email: email
-            }
-        })
-        if (!existingUser && name) {
-            await prisma.user.create({
+        let user = await prisma.user.findUnique({
+            where: { email }
+        });
+
+        if (!user) {
+            user = await prisma.user.create({
                 data: {
                     email,
                     name
                 }
-            })
-            console.error("Erreur lors de la vérification de l'utilisateur:");
-        } else {
-            console.error("Utilisateur déjà présent dans la base de données");
+            });
         }
+
+        return user;
     } catch (error) {
-        console.error("Erreur lors de la vérification de l'utilisateur:", error);
+        console.error(error)
+        throw new Error
     }
 }
 
 function generateUniqueCode(): string {
-    return randomBytes(6).toString('hex')
+    return Math.random().toString(36).substring(2, 8).toUpperCase();
 }
 
 export async function createProject(name: string, description: string, email: string) {
     try {
+        const user = await prisma.user.findUnique({ where: { email } })
+        if (!user) {
+            throw new Error(`Utilisateur avec l'email ${email} introuvable`);
+        }
         const inviteCode = generateUniqueCode();
         const inviteCodeChef = generateUniqueCode();
         const inviteCodeMembre = generateUniqueCode();
-        const user = await prisma.user.findUnique({
-            where: { email }
-        });
-        if (!user) {
-            throw new Error('User not found');
-        }
         const newProject = await prisma.project.create({
             data: {
                 name,
@@ -52,7 +85,14 @@ export async function createProject(name: string, description: string, email: st
                 inviteCodeChef,
                 inviteCodeMembre,
                 createdById: user.id
-            } as any // forcer l'acceptation des champs optionnels
+            } as {
+                name: string;
+                description: string;
+                inviteCode: string;
+                inviteCodeChef: string;
+                inviteCodeMembre: string;
+                createdById: string;
+            }
         });
         return { ...newProject, inviteCodeChef, inviteCodeMembre };
     } catch (error) {
@@ -149,7 +189,7 @@ export async function addUserToProject(email: string, inviteCode: string) {
             where: { email }
         });
         if (!user) {
-            console.error('Utilisateur non trouvé pour l’email', email);
+            console.error('Utilisateur non trouvé pour l\'email', email);
             throw new Error('Utilisateur non trouvé');
         }
         const existingAssociation = await prisma.projectUser.findUnique({
@@ -167,12 +207,12 @@ export async function addUserToProject(email: string, inviteCode: string) {
         // Détermine le rôle à assigner
         let newRole = user.role;
         let isChef = false;
-        // On utilise as any pour lever les erreurs TypeScript sur les champs optionnels
-        const projectAny = project as any;
-        if (projectAny.inviteCodeChef && inviteCode === projectAny.inviteCodeChef) {
+        // On utilise le type ProjectWithOptionalFields pour les champs optionnels
+        const projectWithOptionalFields = project as ProjectWithOptionalFields;
+        if (projectWithOptionalFields.inviteCodeChef && inviteCode === projectWithOptionalFields.inviteCodeChef) {
             newRole = 'CHEF';
             isChef = true;
-        } else if (projectAny.inviteCodeMembre && inviteCode === projectAny.inviteCodeMembre) {
+        } else if (projectWithOptionalFields.inviteCodeMembre && inviteCode === projectWithOptionalFields.inviteCodeMembre) {
             newRole = 'MEMBRE';
         }
         // Met à jour le rôle si besoin
@@ -187,12 +227,16 @@ export async function addUserToProject(email: string, inviteCode: string) {
         });
         // Si c'est le code chef, on met à jour le champ chefDeProjetId du projet
         if (isChef) {
-            await prisma.project.update({ where: { id: project.id }, data: { chefDeProjetId: user.id } as any });
+            await prisma.project.update({ 
+                where: { id: project.id }, 
+                data: { chefDeProjetId: user.id } 
+            });
         }
         return 'Utilisateur ajouté au projet avec succès';
-    } catch (error: any) {
-        console.error('Erreur addUserToProject:', error?.message || error);
-        throw new Error(error?.message || 'Erreur lors de l’ajout au projet');
+    } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : 'Erreur lors de l\'ajout au projet';
+        console.error('Erreur addUserToProject:', errorMessage);
+        throw new Error(errorMessage);
     }
 }
 
@@ -334,7 +378,7 @@ export async function createTask(
             if (!assignedUser) {
                 throw new Error(`Utilisateur avec l'email ${assignToEmail} introuvable`);
             }
-            const isMember = project.users.some((pu: any) => pu.user.email === assignToEmail)
+            const isMember = project.users.some((pu: ProjectUserEntry) => pu.user.email === assignToEmail)
             if (!isMember) {
                 throw new Error('L\'utilisateur assigné doit être membre du projet');
             }
@@ -354,7 +398,8 @@ export async function createTask(
         return newTask;
     } catch (error) {
         console.error(error)
-        throw new Error(error.message || error.toString())
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        throw new Error(errorMessage)
     }
 }
 export async function deleteTaskById(taskId: string) {
@@ -479,15 +524,15 @@ export async function getProjectsWithTotalCost(email: string): Promise<(Project 
         chefDeProjet: true
       }
     });
-    const formattedProjects = projects.map((project: any) => {
-      const totalCost = (project.costs || []).reduce((sum: number, c: any) => sum + (c.spent || 0), 0);
+    const formattedProjects = projects.map((project) => {
+      const totalCost = (project.costs || []).reduce((sum: number, c: { spent: number }) => sum + (c.spent || 0), 0);
       return {
         ...project,
-        users: project.users.map((userEntry: any) => userEntry.user),
+        users: project.users.map((userEntry: { user: { id: string; name: string; email: string; role: string } }) => userEntry.user),
         totalCost
       };
     });
-    return formattedProjects;
+    return formattedProjects as unknown as (Project & { totalCost: number })[];
   } catch (error) {
     console.error(error);
     throw new Error;

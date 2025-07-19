@@ -9,7 +9,7 @@ import { Project } from '@/type'
 import ProjectComponent from '../components/ProjectComponent'
 import EmptyState from '../components/EmptyState'
 
-const page = () => {
+const Page = () => {
     const { user } = useUser()
     const email = user?.primaryEmailAddress?.emailAddress as string
     const [inviteCode, setInviteCode] = useState("")
@@ -19,7 +19,7 @@ const page = () => {
         try {
             const associated = await getProjectsAssociatedWithUser(email)
             setAssociatedProjects(associated)
-        } catch (error) {
+        } catch {
             toast.error("Erreur lors du chargement des projets:");
         }
     }
@@ -40,7 +40,7 @@ const page = () => {
             } else {
                 toast.error('Il manque le code du projet');
             }
-        } catch (error) {
+        } catch {
             toast.error("Code invalide ou vous appartenez déjà au projet");
         }
     }
@@ -85,4 +85,4 @@ const page = () => {
     )
 }
 
-export default page
+export default Page

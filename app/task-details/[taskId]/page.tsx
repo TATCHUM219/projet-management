@@ -5,21 +5,20 @@ import UserInfo from '@/app/components/UserInfo';
 import Wrapper from '@/app/components/Wrapper';
 import { Project, Task } from '@/type';
 import Link from 'next/link';
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import ReactQuill from 'react-quill-new';
 import { toast } from 'react-toastify';
 import 'react-quill-new/dist/quill.snow.css';
 import { useUser } from '@clerk/nextjs';
 import ResourceList from '@/app/components/ResourceList';
-import { getTaskResources, getProjectResources } from '@/app/actions';
+import { getTaskResources } from '@/app/actions';
 
-const page = ({ params }: { params: Promise<{ taskId: string }> }) => {
+const Page = ({ params }: { params: Promise<{ taskId: string }> }) => {
   const { user } = useUser();
   const email = user?.primaryEmailAddress?.emailAddress;
 
   const [task, setTask] = useState<Task | null>(null)
   const [taskId, setTaskId] = useState<string>("")
-  const [projectId, setProjectId] = useState("");
   const [project, setProject] = useState<Project | null>(null);
   const [status, setStatus] = useState("");
   const [realStatus, setRealStatus] = useState("");
@@ -43,7 +42,7 @@ const page = ({ params }: { params: Promise<{ taskId: string }> }) => {
     ]
   };
 
-  const fetchInfos = async (taskId: string) => {
+  const fetchInfos = useCallback(async (taskId: string) => {
     try {
       const task = await getTaskDetails(taskId)
       setTask(task)
@@ -57,16 +56,16 @@ const page = ({ params }: { params: Promise<{ taskId: string }> }) => {
       const res = await fetch('/api/resource');
       const all = await res.json();
       setAllResources(all);
-    } catch (error) {
+    } catch {
       toast.error("Erreur lors du chargement des détails de la tâche.");
     }
-  }
+  }, [])
 
   const fetchProject = async (projectId: string) => {
     try {
       const project = await getProjectInfo(projectId, false)
-      setProject(project)
-    } catch (error) {
+      setProject(project as Project)
+    } catch {
       toast.error("Erreur lors du chargement du projet");
     }
   }
@@ -78,13 +77,13 @@ const page = ({ params }: { params: Promise<{ taskId: string }> }) => {
       fetchInfos(resolvedParams.taskId)
     }
     getId()
-  }, [params])
+  }, [params, fetchInfos])
 
   const changeStatus = async (taskId: string, newStatus: string) => {
     try {
       await updateTaskStatus(taskId, newStatus)
       fetchInfos(taskId)
-    } catch (error) {
+    } catch {
       toast.error("Erreur lors du changement de status")
     }
   }
@@ -116,7 +115,7 @@ const page = ({ params }: { params: Promise<{ taskId: string }> }) => {
         toast.error('Il manque une solution')
       }
 
-    } catch (error) {
+    } catch {
       toast.error("Erreur lors du changement de status")
     }
   }
@@ -181,7 +180,7 @@ const page = ({ params }: { params: Promise<{ taskId: string }> }) => {
                   await fetch(`/api/resource/assign/${tr.id}`, { method: 'DELETE' });
                   fetchInfos(taskId);
                   toast.success('Ressource supprimée !');
-                } catch (e) {
+                } catch {
                   toast.error('Erreur lors de la suppression');
                 }
               }}
@@ -199,7 +198,7 @@ const page = ({ params }: { params: Promise<{ taskId: string }> }) => {
                 <div className="mb-2">
                   <select className="select select-bordered w-full" value={selectedResource || ''} onChange={e => setSelectedResource(e.target.value)}>
                     <option value="">Choisir une ressource</option>
-                    {allResources.map((r: any) => (
+                    {allResources.map((r: { id: string; name: string; type: string }) => (
                       <option key={r.id} value={r.id}>{r.name} ({r.type})</option>
                     ))}
                   </select>
@@ -218,8 +217,8 @@ const page = ({ params }: { params: Promise<{ taskId: string }> }) => {
                     setShowAssignModal(false);
                     fetchInfos(taskId);
                     toast.success('Ressource assignée !');
-                  } catch (e) {
-                    toast.error('Erreur lors de l\'assignation');
+                  } catch {
+                    toast.error('Erreur lors de l&apos;assignation');
                   }
                 }}>
                   Assigner
@@ -293,7 +292,7 @@ const page = ({ params }: { params: Promise<{ taskId: string }> }) => {
                 {/* if there is a button in form, it will close the modal */}
                 <button className="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
               </form>
-              <h3 className="font-bold text-lg">C'est quoi la solutions ?</h3>
+              <h3 className="font-bold text-lg">C&apos;est quoi la solutions ?</h3>
               <p className="py-4">Décrivez ce que vous avez fait exactement</p>
 
               <ReactQuill
@@ -318,4 +317,4 @@ const page = ({ params }: { params: Promise<{ taskId: string }> }) => {
   )
 }
 
-export default page
+export default Page

@@ -12,7 +12,7 @@ import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
 import { toast } from 'react-toastify';
 
-const page = ({ params }: { params: Promise<{ projectId: string }> }) => {
+const Page = ({ params }: { params: Promise<{ projectId: string }> }) => {
 
     const modules = {
         toolbar: [
@@ -41,13 +41,13 @@ const page = ({ params }: { params: Promise<{ projectId: string }> }) => {
     const fetchInfos = async (projectId: string) => {
         try {
             const project = await getProjectInfo(projectId, true)
-            setProject(project)
+            setProject(project as Project)
 
             const associatedUsers = await getProjectUsers(projectId)
             setUsersProject(associatedUsers)
 
-        } catch (error) {
-            console.error('Erreur lors du chargement du projet:', error);
+        } catch {
+            console.error('Erreur lors du chargement du projet');
         }
     }
 
@@ -73,8 +73,8 @@ const page = ({ params }: { params: Promise<{ projectId: string }> }) => {
         try {
             await createTask(name, description, dueDate, projectId, email, selectedUser.email)
             rooter.push(`/project/${projectId}`)
-        } catch (error) {
-            toast.error("Une erreur est survenue lors de la création de la tâche." + error);
+        } catch {
+            toast.error("Une erreur est survenue lors de la création de la tâche.");
         }
 
     }
@@ -136,4 +136,4 @@ const page = ({ params }: { params: Promise<{ projectId: string }> }) => {
     )
 }
 
-export default page
+export default Page

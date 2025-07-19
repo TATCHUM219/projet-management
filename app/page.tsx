@@ -1,13 +1,12 @@
 "use client"
 
-import Image from "next/image";
 import Wrapper from "./components/Wrapper";
 import { useEffect, useState } from "react";
 import { FolderGit2 } from "lucide-react";
-import { createProject, deleteProjectById, getProjectsCreatedByUser, getProjectsWithTotalCost } from "./actions";
+import { createProject, deleteProjectById, getProjectsWithTotalCost } from "./actions";
 import { useUser } from "@clerk/nextjs";
 import { toast } from "react-toastify";
-import { Project, Resource } from "@/type";
+import { Project } from "@/type";
 import ProjectComponent from "./components/ProjectComponent";
 import EmptyState from "./components/EmptyState";
 
@@ -19,24 +18,19 @@ export default function Home() {
   const [name, setName] = useState("")
   const [descrition, setDescription] = useState("")
   const [projects, setProjects] = useState<Project[]>([])
-    const [role, setRole] = useState<string | null>(null);
-  const [resources, setResources] = useState<Resource[]>([]);
-  const [showResourceModal, setShowResourceModal] = useState(false);
-  const [resourceName, setResourceName] = useState('');
-  const [resourceType, setResourceType] = useState('HUMAN');
-  const [resourceCost, setResourceCost] = useState('');
+  const [role, setRole] = useState<string | null>(null);
   const [lastCodes, setLastCodes] = useState<{chef?: string, membre?: string} | null>(null);
 
   const fetchProjects = async (email: string) => {
     try {
       const myproject = await getProjectsWithTotalCost(email)
       setProjects(myproject)
-      myproject.forEach((p: any) => {
+      myproject.forEach((p: Project) => {
         console.log(`Chef du projet ${p.name} : ${p.chefDeProjet?.email || '-'}`);
       });
       // console.log(myproject)
-    } catch (error) {
-      console.error('Erreur lors du chargement des projets:', error);
+    } catch {
+      console.error('Erreur lors du chargement des projets');
     }
   }
 
@@ -58,7 +52,7 @@ export default function Home() {
       await deleteProjectById(projectId)
       setProjects(projects.filter(p => p.id !== projectId))
       toast.success('Project supprimé !')
-    } catch (error: any) {
+    } catch {
       toast.error('Erreur lors de la suppression du projet.');
     }
   }
@@ -77,11 +71,11 @@ export default function Home() {
       setName("");
       setDescription("");
       // Ajoute le projet sans rechargement
-      setProjects([project, ...projects])
+      setProjects([project as Project, ...projects])
       setLastCodes({ chef: project.inviteCodeChef, membre: project.inviteCodeMembre });
       toast.success("Projet Créé")
-    } catch (error) {
-      console.error('Error creating project:', error);
+    } catch {
+      console.error('Error creating project');
     }
   }
 
@@ -135,7 +129,7 @@ export default function Home() {
         <div className="w-full">
           {lastCodes && (
             <div className="mb-4">
-              <div className="font-bold">Codes d'invitation :</div>
+              <div className="font-bold">Codes d&apos;invitation :</div>
               <div className="flex gap-2 items-center mt-2">
                 <span className="badge badge-primary">Chef de projet</span>
                 <span className="select-all bg-base-200 px-2 py-1 rounded">{lastCodes.chef}</span>

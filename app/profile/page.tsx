@@ -2,7 +2,6 @@
 import { useUser } from "@clerk/nextjs";
 import Wrapper from "../components/Wrapper";
 import { useEffect, useState } from "react";
-import { Project, Task } from "@/type";
 import Image from "next/image";
 
 export default function ProfilePage() {

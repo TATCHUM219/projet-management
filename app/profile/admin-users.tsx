@@ -4,9 +4,16 @@ import Wrapper from "../components/Wrapper";
 import { toast } from "react-toastify";
 import { Project } from "@/type";
 
+type User = {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+};
+
 export default function AdminUsersPage() {
-  const [users, setUsers] = useState([]);
-  const [chefs, setChefs] = useState([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [chefs, setChefs] = useState<User[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedProject, setSelectedProject] = useState("");
@@ -17,7 +24,7 @@ export default function AdminUsersPage() {
     const res = await fetch("/api/user");
     const data = await res.json();
     setUsers(data);
-    setChefs(data.filter((u: any) => u.role === "CHEF"));
+    setChefs(data.filter((u: User) => u.role === "CHEF"));
     setLoading(false);
   };
   const fetchProjects = async () => {
@@ -51,7 +58,7 @@ export default function AdminUsersPage() {
       }
       toast.success("Rôle modifié");
       fetchUsers();
-    } catch (e) {
+    } catch {
       toast.error("Erreur lors du changement de rôle.");
     }
   };
@@ -91,7 +98,7 @@ export default function AdminUsersPage() {
             </select>
             <select className="select select-bordered" value={selectedChef} onChange={e => setSelectedChef(e.target.value)}>
               <option value="">Chef de projet...</option>
-              {chefs.map((c: any) => (
+              {chefs.map((c: User) => (
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}
             </select>
@@ -109,7 +116,7 @@ export default function AdminUsersPage() {
               </tr>
             </thead>
             <tbody>
-              {users.map((u: any) => (
+              {users.map((u: User) => (
                 <tr key={u.id}>
                   <td>{u.name}</td>
                   <td>{u.email}</td>

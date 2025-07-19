@@ -16,7 +16,7 @@ import ResourceList from '@/app/components/ResourceList';
 import CostSummary from '@/app/components/CostSummary';
 import { getProjectResources, getProjectCosts } from '@/app/actions';
 
-const page = ({ params }: { params: Promise<{ projectId: string }> }) => {
+const Page = ({ params }: { params: Promise<{ projectId: string }> }) => {
 
     const { user } = useUser();
     const email = user?.primaryEmailAddress?.emailAddress;
@@ -28,20 +28,20 @@ const page = ({ params }: { params: Promise<{ projectId: string }> }) => {
 
     const [assignedFilter, setAssignedFilter] = useState<boolean>(false);
     const [taskCounts, setTaskCounts] = useState({ todo: 0, inProgress: 0, done: 0, assigned: 0 })
-    const [resources, setResources] = useState([]);
-    const [costs, setCosts] = useState([]);
+    const [resources, setResources] = useState<any[]>([]);
+    const [costs, setCosts] = useState<any[]>([]);
 
     const fetchInfos = async (projectId: string) => {
         try {
             const project = await getProjectInfo(projectId, true)
-            setProject(project)
+            setProject(project as Project)
             // Ajout récupération ressources et coûts
             const res = await getProjectResources(projectId);
             setResources(res);
             const c = await getProjectCosts(projectId);
             setCosts(c);
-        } catch (error) {
-            console.error('Erreur lors du chargement du projet:', error);
+        } catch {
+            console.error('Erreur lors du chargement du projet');
         }
     }
 
@@ -65,7 +65,7 @@ const page = ({ params }: { params: Promise<{ projectId: string }> }) => {
             }
             setTaskCounts(counts) 
         }
-    }, [project])
+    }, [project, email])
 
     useEffect(() => {
         if (email) {
@@ -91,7 +91,7 @@ const page = ({ params }: { params: Promise<{ projectId: string }> }) => {
             await deleteTaskById(taskId)
             fetchInfos(projectId)
             toast.success('Tache supprimée !')
-        } catch (error) {
+        } catch {
             toast.error("Error Task project")
         }
     }
@@ -211,4 +211,4 @@ const page = ({ params }: { params: Promise<{ projectId: string }> }) => {
     )
 }
 
-export default page
+export default Page
