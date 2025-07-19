@@ -8,7 +8,7 @@ interface AssignTaskProps {
     onAssignTask : (user : User) => void;
 }
 
-const AssignTask: FC<AssignTaskProps> = ({ users, projectId , onAssignTask }) => {
+const AssignTask: FC<AssignTaskProps> = ({ users , onAssignTask }) => {
 
     const [selectedUser, setSelectedUser] = useState<User | null>(null)
 

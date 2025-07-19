@@ -2,7 +2,7 @@
 
 import { auth } from '@clerk/nextjs/server';
 import prisma from '@/lib/prisma';
-import { Project, Task } from '@/type';
+import { Project} from '@/type';
 
 // Type definitions for Prisma includes
 type ProjectWithOptionalFields = Project & {

@@ -63,6 +63,7 @@ const ProjectComponent: FC<ProjectProps> = ({ project, admin, style, onDelete })
             setEditMode(false);
         } catch (e) {
             toast.error('Erreur lors de la sauvegarde');
+            console.log(e)
         } finally {
             setSaving(false);
         }

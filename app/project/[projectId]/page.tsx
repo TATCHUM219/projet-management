@@ -16,6 +16,23 @@ import ResourceList from '@/app/components/ResourceList';
 import CostSummary from '@/app/components/CostSummary';
 import { getProjectResources, getProjectCosts } from '@/app/actions';
 
+// Type definitions for API responses
+type ApiResource = {
+  id: string;
+  name: string;
+  type: string;
+  cost: number;
+  projectId: string | null;
+};
+
+type ApiCost = {
+  id: string;
+  projectId: string;
+  budget: number;
+  spent: number;
+  updatedAt: Date;
+};
+
 const Page = ({ params }: { params: Promise<{ projectId: string }> }) => {
 
     const { user } = useUser();
@@ -37,9 +54,9 @@ const Page = ({ params }: { params: Promise<{ projectId: string }> }) => {
             setProject(project as Project)
             // Ajout récupération ressources et coûts
             const res = await getProjectResources(projectId);
-            setResources(res.map((r: any) => ({ ...r, projectId: r.projectId ?? undefined })));
+            setResources(res.map((r: ApiResource) => ({ ...r, projectId: r.projectId ?? undefined })));
             const c = await getProjectCosts(projectId);
-            setCosts(c.map((cost: any) => ({ ...cost, updatedAt: typeof cost.updatedAt === 'string' ? cost.updatedAt : cost.updatedAt.toISOString() })));
+            setCosts(c.map((cost: ApiCost) => ({ ...cost, updatedAt: cost.updatedAt.toISOString() })));
         } catch {
             console.error('Erreur lors du chargement du projet');
         }

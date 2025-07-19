@@ -4,7 +4,7 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 // GET /api/resource : liste toutes les ressources
-export async function GET(req: NextRequest) {
+export async function GET() {
   const resources = await prisma.resource.findMany();
   return NextResponse.json(resources);
 }
