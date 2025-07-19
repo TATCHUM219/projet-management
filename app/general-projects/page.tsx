@@ -18,7 +18,7 @@ const Page = () => {
     const fetchProjects = async (email: string) => {
         try {
             const associated = await getProjectsAssociatedWithUser(email)
-            setAssociatedProjects(associated)
+            setAssociatedProjects(associated as Project[])
         } catch {
             toast.error("Erreur lors du chargement des projets:");
         }
