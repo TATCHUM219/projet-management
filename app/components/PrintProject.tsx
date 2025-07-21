@@ -247,7 +247,7 @@ const PrintProject: React.FC<PrintProjectProps> = ({ project, resources, costs }
                             <tbody>
                                 ${project.tasks.map(task => `
                                     <tr>
-                                        <td>${task.title}</td>
+                                        <td>${task.name}</td>
                                         <td>${task.status}</td>
                                         <td>${task.user?.name || task.user?.email || 'Non assigné'}</td>
                                         <td>${task.dueDate ? new Date(task.dueDate).toLocaleDateString('fr-FR') : 'Non définie'}</td>
