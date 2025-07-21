@@ -489,7 +489,7 @@ export async function getProjectsWithTotalCost(email: string): Promise<(Project 
     const projects = await prisma.project.findMany({
       where: { createdBy: { email } },
       include: {
-        costs: true,
+        resources: true,
         tasks: {
           include: { user: true, createdBy: true }
         },
@@ -504,14 +504,18 @@ export async function getProjectsWithTotalCost(email: string): Promise<(Project 
       }
     });
     const formattedProjects = projects.map((project) => {
-      const totalCost = (project.costs || []).reduce((sum: number, c: { spent: number }) => sum + (c.spent || 0), 0);
+      // Nouveau calcul : somme des coûts des ressources du projet
+      const totalCost = (project.resources || []).reduce((sum: number, r: { cost: number }) => sum + (r.cost || 0), 0);
+      // Correction du typage des ressources
+      const fixedResources = (project.resources || []).map((r: any) => ({ ...r, projectId: r.projectId ?? undefined }));
       return {
         ...project,
         users: project.users.map((userEntry: { user: { id: string; name: string; email: string; role: string } }) => userEntry.user),
+        resources: fixedResources,
         totalCost
       };
     });
-    return formattedProjects as unknown as (Project & { totalCost: number })[];
+    return formattedProjects;
   } catch (error) {
     console.error(error);
     throw new Error;

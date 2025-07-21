@@ -14,6 +14,7 @@ import TaskComponent from '@/app/components/TaskComponent';
 import { toast } from 'react-toastify';
 import ResourceList from '@/app/components/ResourceList';
 import CostSummary from '@/app/components/CostSummary';
+import PrintProject from '@/app/components/PrintProject';
 import { getProjectResources, getProjectCosts } from '@/app/actions';
 
 // Type definitions for API responses
@@ -184,6 +185,16 @@ const Page = ({ params }: { params: Promise<{ projectId: string }> }) => {
                               Nouvelle tâche
                               <CopyPlus className='w-4' />
                           </Link>
+                        )}
+                        {/* Bouton d'impression visible pour tous les utilisateurs */}
+                        {project && (
+                            <div className='flex gap-2 mt-2 md:mt-0'>
+                                <PrintProject 
+                                    project={project} 
+                                    resources={resources} 
+                                    costs={costs} 
+                                />
+                            </div>
                         )}
                     </div>
                     <div className='mt-6 border border-base-300 p-5 shadow-sm rounded-xl'>

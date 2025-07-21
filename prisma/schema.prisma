@@ -21,6 +21,8 @@ model User {
   projects     Project[]    @relation("UserProjects")
   userProjects ProjectUser[]
   projetsChef  Project[]    @relation("ChefDeProjet")
+  sentMessages Message[]    @relation("SentMessages")
+  receivedMessages Message[] @relation("ReceivedMessages")
 }
 
 model Project {
@@ -40,6 +42,7 @@ model Project {
   users       ProjectUser[]
   resources   Resource[]   // back-relation
   costs       Cost[]       // back-relation
+  messages    Message[]
 }
 
 model Task {
@@ -93,4 +96,17 @@ model Cost {
   budget    Float
   spent     Float
   updatedAt DateTime @updatedAt
+}
+
+model Message {
+  id          String   @id @default(uuid())
+  content     String
+  createdAt   DateTime @default(now())
+  read        Boolean  @default(false)
+  senderId    String
+  receiverId  String
+  projectId   String
+  sender      User     @relation("SentMessages", fields: [senderId], references: [id])
+  receiver    User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  project     Project  @relation(fields: [projectId], references: [id])
 }

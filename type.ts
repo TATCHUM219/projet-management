@@ -6,7 +6,7 @@ export type Resource = {
   name: string;
   type: string;
   cost: number;
-  projectId?: string;
+  projectId?: string | null;
 };
 
 export type TaskResource = {
@@ -43,7 +43,7 @@ export type Project = PrismaProject & {
   createdBy?: User;
   resources?: Resource[];
   costs?: Cost[];
-  chefDeProjetId?: string;
+  chefDeProjetId?: string | null;
   chefDeProjet?: User;
   totalCost?: number;
 };

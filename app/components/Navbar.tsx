@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation'
 
 import React, { useEffect, useState } from 'react'
 import { checkAndAddUser } from '../actions'
+import MessageNotification from './MessageNotification'
 
 const Navbar = () => {
     const { user } = useUser()
@@ -28,6 +29,10 @@ const Navbar = () => {
         },
         {
             href: "/profile/admin-users", label: "Utilisateurs", adminOnly: true
+        },
+        // Lien messagerie pour tous
+        {
+            href: "/messaging", label: "Messagerie"
         }
     ]
 
@@ -42,8 +47,9 @@ const Navbar = () => {
 
     const renderLinks = (classNames: string) =>
         navLinks.filter(link => !link.adminOnly || (user && user.publicMetadata?.role === 'ADMIN')).map(({ href, label }) => {
-            return <Link key={href} href={href} className={`btn-sm ${classNames} ${isActiveLink(href) ? "btn-primary" : ""}`}>
+            return <Link key={href} href={href} className={`btn-sm ${classNames} ${isActiveLink(href) ? "btn-primary" : ""} relative`}>
                 {label}
+                {href === '/messaging' && <MessageNotification />}
             </Link>
         })
 
