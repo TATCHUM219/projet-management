@@ -82,7 +82,7 @@ const MessagingPage = () => {
       .then(messages => {
         setReceivedMessages(messages);
         // Marquer les messages non lus comme lus
-        messages.forEach(async (msg) => {
+        messages.forEach(async (msg: Message) => {
           if (!msg.read) {
             await fetch(`/api/message/${msg.id}/read`, { method: 'PUT' });
           }
