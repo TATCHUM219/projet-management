@@ -190,7 +190,7 @@ const Page = ({ params }: { params: Promise<{ taskId: string }> }) => {
                 projectId: tr.resource.projectId || undefined
               }))}
               showQuantity={true}
-              quantities={Object.fromEntries(taskResources.map(tr => [tr.resourceId, tr.quantity]))}
+              quantities={Object.fromEntries(taskResources.filter(tr => tr.quantity !== null).map(tr => [tr.resourceId, tr.quantity as number]))}
               onDelete={async (resourceId) => {
                 // Trouver l'id du TaskResource à supprimer
                 const tr = taskResources.find(tr => tr.resourceId === resourceId);
