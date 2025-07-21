@@ -5,6 +5,27 @@ import { Project, User } from "@/type";
 import { toast } from "react-toastify";
 import Wrapper from "@/app/components/Wrapper";
 
+// Définition du type Message utilisé dans la messagerie
+interface Message {
+  id: string;
+  content: string;
+  createdAt: string;
+  read: boolean;
+  sender?: User;
+  receiver?: User;
+}
+
+// Ajout d'un utilitaire pour détecter les messages diffusés (même contenu, même date, même expéditeur, plusieurs destinataires)
+function groupBroadcastMessages(messages: Message[]) {
+  const grouped: { [key: string]: Message[] } = {};
+  messages.forEach((msg) => {
+    const key = `${msg.content}|${msg.createdAt}`;
+    if (!grouped[key]) grouped[key] = [];
+    grouped[key].push(msg);
+  });
+  return grouped;
+}
+
 const MessagingPage = () => {
   const { user } = useUser();
   const userId = user?.id;
@@ -14,10 +35,11 @@ const MessagingPage = () => {
   const [members, setMembers] = useState<User[]>([]);
   const [receiverId, setReceiverId] = useState<string>("");
   const [content, setContent] = useState("");
-  const [receivedMessages, setReceivedMessages] = useState<any[]>([]);
-  const [sentMessages, setSentMessages] = useState<any[]>([]);
+  const [receivedMessages, setReceivedMessages] = useState<Message[]>([]);
+  const [sentMessages, setSentMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingProjects, setLoadingProjects] = useState(false);
+  const [broadcast, setBroadcast] = useState(false);
 
   // Charger les projets de l'utilisateur
   useEffect(() => {
@@ -74,20 +96,25 @@ const MessagingPage = () => {
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!receiverId || !content || !selectedProject) {
+    if (!content || !selectedProject) {
       toast.error("Veuillez remplir tous les champs");
+      return;
+    }
+    if (!broadcast && !receiverId) {
+      toast.error("Veuillez sélectionner un destinataire ou activer la diffusion");
       return;
     }
     setLoading(true);
     const res = await fetch("/api/message", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ senderId: userId, receiverId, projectId: selectedProject, content })
+      body: JSON.stringify({ senderId: userId, receiverId, projectId: selectedProject, content, broadcast })
     });
     if (res.ok) {
-      toast.success("Message envoyé");
+      toast.success(broadcast ? "Message diffusé à tout le projet" : "Message envoyé");
       setContent("");
       setReceiverId("");
+      setBroadcast(false);
       // Refresh messages
       fetch(`/api/message/sent?userId=${userId}&projectId=${selectedProject}`)
         .then(res => res.json())
@@ -116,14 +143,14 @@ const MessagingPage = () => {
       </div>
       {projects.length === 0 && !loadingProjects && (
         <div className="alert alert-info">
-          <span>Aucun projet trouvé. Vous devez être membre d'au moins un projet pour utiliser la messagerie.</span>
+          <span>Aucun projet trouvé. Vous devez être membre d&apos;au moins un projet pour utiliser la messagerie.</span>
         </div>
       )}
       {selectedProject && (
         <>
           <form className="mb-6 card bg-base-100 p-4" onSubmit={handleSend}>
             <div className="flex flex-col md:flex-row gap-2 mb-2">
-              <select className="select select-bordered flex-1" value={receiverId} onChange={e => setReceiverId(e.target.value)}>
+              <select className="select select-bordered flex-1" value={receiverId} onChange={e => setReceiverId(e.target.value)} disabled={broadcast}>
                 <option value="">Destinataire</option>
                 {members.filter(m => m.id !== userId).map(m => (
                   <option key={m.id} value={m.id}>{m.name} ({m.email})</option>
@@ -131,6 +158,12 @@ const MessagingPage = () => {
               </select>
               <textarea className="textarea textarea-bordered flex-1" value={content} onChange={e => setContent(e.target.value)} placeholder="Votre message..." />
               <button className="btn btn-primary" type="submit" disabled={loading}>Envoyer</button>
+            </div>
+            <div className="form-control mt-2">
+              <label className="label cursor-pointer">
+                <span className="label-text">Diffuser à tout le projet</span>
+                <input type="checkbox" className="checkbox checkbox-primary ml-2" checked={broadcast} onChange={e => setBroadcast(e.target.checked)} />
+              </label>
             </div>
           </form>
           <div className="tabs tabs-boxed mb-4">
@@ -144,7 +177,7 @@ const MessagingPage = () => {
                 {loading ? <div>Chargement...</div> : (
                   <ul className="space-y-2">
                     {receivedMessages.length === 0 && <li>Aucun message reçu.</li>}
-                    {receivedMessages.map((msg, i) => (
+                    {receivedMessages.map((msg) => (
                       <li key={msg.id} className="card bg-base-200 p-3">
                         <div className="text-sm text-gray-500">De : {msg.sender?.name || msg.sender?.email}</div>
                         <div>{msg.content}</div>
@@ -161,11 +194,22 @@ const MessagingPage = () => {
                 {loading ? <div>Chargement...</div> : (
                   <ul className="space-y-2">
                     {sentMessages.length === 0 && <li>Aucun message envoyé.</li>}
-                    {sentMessages.map((msg, i) => (
-                      <li key={msg.id} className="card bg-base-200 p-3">
-                        <div className="text-sm text-gray-500">À : {msg.receiver?.name || msg.receiver?.email}</div>
-                        <div>{msg.content}</div>
-                        <div className="text-xs text-right text-gray-400">{new Date(msg.createdAt).toLocaleString('fr-FR')}</div>
+                    {Object.entries(groupBroadcastMessages(sentMessages)).map(([key, msgs]) => (
+                      <li key={key} className="card bg-base-200 p-3">
+                        {msgs.length > 1 ? (
+                          <>
+                            <div className="text-sm text-primary font-bold mb-1">Message diffusé à {msgs.length} membres</div>
+                            <div>{msgs[0].content}</div>
+                            <div className="text-xs text-right text-gray-400">{new Date(msgs[0].createdAt).toLocaleString('fr-FR')}</div>
+                            <div className="text-xs text-gray-500 mt-1">Destinataires : {msgs.map(m => m.receiver?.name || m.receiver?.email).join(', ')}</div>
+                          </>
+                        ) : (
+                          <>
+                            <div className="text-sm text-gray-500">À : {msgs[0].receiver?.name || msgs[0].receiver?.email}</div>
+                            <div>{msgs[0].content}</div>
+                            <div className="text-xs text-right text-gray-400">{new Date(msgs[0].createdAt).toLocaleString('fr-FR')}</div>
+                          </>
+                        )}
                       </li>
                     ))}
                   </ul>

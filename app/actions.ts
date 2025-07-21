@@ -3,6 +3,7 @@
 import { auth } from '@clerk/nextjs/server';
 import prisma from '@/lib/prisma';
 import { Project} from '@/type';
+import type { Resource } from '@/type';
 
 // Type definitions for Prisma includes
 type ProjectWithOptionalFields = Project & {
@@ -507,12 +508,13 @@ export async function getProjectsWithTotalCost(email: string): Promise<(Project 
       // Nouveau calcul : somme des coûts des ressources du projet
       const totalCost = (project.resources || []).reduce((sum: number, r: { cost: number }) => sum + (r.cost || 0), 0);
       // Correction du typage des ressources
-      const fixedResources = (project.resources || []).map((r: any) => ({ ...r, projectId: r.projectId ?? undefined }));
+      const fixedResources = (project.resources || []).map((r: Resource) => ({ ...r, projectId: r.projectId ?? undefined }));
       return {
         ...project,
         users: project.users.map((userEntry: { user: { id: string; name: string; email: string; role: string } }) => userEntry.user),
         resources: fixedResources,
-        totalCost
+        totalCost,
+        chefDeProjet: project.chefDeProjet ?? undefined
       };
     });
     return formattedProjects;
