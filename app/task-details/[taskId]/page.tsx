@@ -41,7 +41,7 @@ const Page = ({ params }: { params: Promise<{ taskId: string }> }) => {
   const [taskResources, setTaskResources] = useState<TaskResourceWithResource[]>([]);
   const [allResources, setAllResources] = useState([]);
   const [showAssignModal, setShowAssignModal] = useState(false);
-  const [selectedResource, setSelectedResource] = useState(null);
+  const [selectedResource, setSelectedResource] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
 
   const modules = {
