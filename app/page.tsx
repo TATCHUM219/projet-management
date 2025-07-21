@@ -119,9 +119,9 @@ export default function Home() {
                 required
               >
               </textarea>
-            {role=="ADMIN"}&&(  <button className="btn btn-primary" onClick={handleSubmit}>
+             <button className="btn btn-primary" onClick={handleSubmit}>
                 Nouveau Projet <FolderGit2 />
-              </button>)
+              </button>
             </div>
           </div>
         </dialog>
