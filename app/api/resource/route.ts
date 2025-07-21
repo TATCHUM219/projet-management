@@ -9,7 +9,7 @@ export async function GET() {
   return NextResponse.json(resources);
 }
 
-// POST /api/resource : crée une nouvelle ressource
+// POST /api/resource : crée unelle ressource
 export async function POST(req: NextRequest) {
   const data = await req.json();
   const { name, type, cost, projectId } = data;

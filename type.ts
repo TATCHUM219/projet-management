@@ -1,4 +1,4 @@
-import { Project as PrismaProject, Task  as  PrismaTask, User } from '@prisma/client';
+import { Project as PrismaProject, Task  as  PrismaTask, User as PrismaUser } from '@prisma/client';
 
 // Fusion du type PrismaProject avec vos propriétés supplémentaires
 export type Resource = {
@@ -53,3 +53,5 @@ export type Task = PrismaTask & {
   createdBy?: User | null;
   taskResources?: TaskResource[];
 };
+
+export type User = PrismaUser;
